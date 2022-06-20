@@ -1,26 +1,20 @@
 use notify::{watcher, DebouncedEvent, RecursiveMode, Watcher};
 use std::fs::{self, File};
-use std::io::{self, Read};
+use std::io::{Read};
 use std::sync::mpsc::channel;
-// use std::sync::mpsc::channel;
-use std::thread;
+use std::{thread, env};
 use std::time::Duration;
+use serde::{Deserialize, Serialize};
 
 #[tokio::main]
 async fn main() {
-    let config = vec![SyncConfig {
-        file_paths: [
-            "/home/ubuntu/mc/data/world/playerdata/00000000-0000-0000-0009-00000b299750.dat".to_string(),
-            "/home/ubuntu/mc/data/world/playerdata/ce7aa529-26dc-3d21-846c-1f604658c3d3.dat".to_string(),
-        ],
-        direction_type: DirectionType::Double,
-    },SyncConfig{
-        file_paths: [
-            "/home/ubuntu/mc/data/world/playerdata/00000000-0000-0000-0009-00000b299750.dat_old".to_string(),
-            "/home/ubuntu/mc/data/world/playerdata/ce7aa529-26dc-3d21-846c-1f604658c3d3.dat_old".to_string(),
-        ],
-        direction_type: DirectionType::Double,
-    }];
+    let args: Vec<String> = env::args().collect();
+    let config_file_path = args.get(1).unwrap();
+    let mut config_file = File::open(config_file_path).unwrap();
+    let mut config_content = vec![];
+    config_file.read_to_end(&mut config_content).unwrap();
+    let config: Vec<SyncConfig> = serde_json::from_slice(&config_content).unwrap();
+
 
     config_watch(&config).await.unwrap();
 
@@ -29,11 +23,12 @@ async fn main() {
     }
 }
 
+#[derive(Serialize, Deserialize)]
 enum DirectionType {
     Sigle,
     Double,
 }
-
+#[derive(Serialize, Deserialize)]
 struct SyncConfig {
     file_paths: [String; 2],
     direction_type: DirectionType,
@@ -46,17 +41,17 @@ async fn config_watch(configs: &Vec<SyncConfig>) -> anyhow::Result<()> {
         match config.direction_type {
             DirectionType::Sigle => {
                 tokio::spawn(async move {
-                    watch_file(path0.clone(), path1.clone()).await;
+                    watch_file(path0.clone(), path1.clone()).await.unwrap();
                 });
             }
             DirectionType::Double => {
                 let p0 = path0.clone();
                 let p1 = path1.clone();
                 tokio::spawn(async move {
-                    watch_file(path0.clone(), path1.clone()).await;
+                    watch_file(path0.clone(), path1.clone()).await.unwrap();
                 });
                 tokio::spawn(async move {
-                    watch_file(p1, p0).await;
+                    watch_file(p1, p0).await.unwrap();
                 });
             }
         }
@@ -68,17 +63,17 @@ async fn watch_file(src: String, dst: String) -> anyhow::Result<()> {
     // Automatically select the best implementation for your platform.
     // You can also access each implementation directly e.g. INotifyWatcher.
     let (tx, rx) = channel();
-    let mut watcher = watcher(tx, Duration::from_secs(10)).unwrap();
-    watcher.watch(&src, RecursiveMode::Recursive).unwrap();
+    let mut watcher = watcher(tx, Duration::from_secs(10))?;
+    watcher.watch(&src, RecursiveMode::Recursive)?;
     loop {
         match rx.recv() {
             Ok(event) => {
                 match event {
                     DebouncedEvent::Create(_path) => {
-                        copy_file(&src, &dst).unwrap();
+                        copy_file_with_log(&src, &dst);
                     }
                     DebouncedEvent::Write(_path) => {
-                        copy_file(&src, &dst).unwrap();
+                        copy_file_with_log(&src, &dst);
                     }
                     _ => (),
                 };
@@ -86,31 +81,23 @@ async fn watch_file(src: String, dst: String) -> anyhow::Result<()> {
             Err(e) => println!("watch error: {:?}", e),
         }
     }
-    Ok(())
+}
+fn copy_file_with_log(src: &str, dst: &str){
+    match copy_file(src,dst){
+        Ok(_) => (),
+        Err(e) => println!("copy {} to {} error: {:?}", src, dst, e),
+    }
 }
 
-// async fn copy_file(src: &str, dst: &str) -> anyhow::Result<()> {
-//     let mut src = File::open(src).await?;
-//     let mut dst = File::create(dst).await?;
-
-//     let mut src_contents = vec![];
-//     src.read_buf(&mut src_contents).await?;
-//     let mut dst_contents = vec![];
-//     dst.read_buf(&mut dst_contents).await?;
-
-//     let src_digest = md5::compute(src_contents);
-//     let dst_digest = md5::compute(dst_contents);
-
-//     if src_digest == dst_digest {
-//         return Ok(());
-//     }else{
-//         io::copy(&mut src, &mut dst).await?;
-//     }
-
-//     Ok(())
-// }
 
 fn copy_file(src: &str, dst: &str) -> anyhow::Result<()> {
+    let src_modify_time = fs::metadata(src)?.modified()?;
+    let dst_modify_time = fs::metadata(src)?.modified()?;
+
+    if dst_modify_time.le(&src_modify_time){
+        return Ok(());
+    }
+
     let mut src_file = File::open(src)?;
     let mut dst_file = File::open(dst)?;
 

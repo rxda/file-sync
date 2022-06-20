@@ -1,8 +1,16 @@
 [
     {
-        "user_path":"/home/user/",
-        "user_map":["uuid1","uuid2"]
+        "file_paths":[
+            "/home/ubuntu/mc/data/world/playerdata/00000000-0000-0000-0009-00000b299750.dat",
+            "/home/ubuntu/mc/data/world/playerdata/ce7aa529-26dc-3d21-846c-1f604658c3d3.dat"
+        ],
+        "direction_type":"Double"
+    },
+    {
+        "file_paths":[
+            "/home/ubuntu/mc/data/world/playerdata/00000000-0000-0000-0009-00000b299750.dat_old",
+            "/home/ubuntu/mc/data/world/playerdata/ce7aa529-26dc-3d21-846c-1f604658c3d3.dat_old"
+        ],
+        "direction_type":"Double"
     }
-
-
 ]
