@@ -92,9 +92,9 @@ fn copy_file_with_log(src: &str, dst: &str){
 
 fn copy_file(src: &str, dst: &str) -> anyhow::Result<()> {
     let src_modify_time = fs::metadata(src)?.modified()?;
-    let dst_modify_time = fs::metadata(src)?.modified()?;
-
-    if dst_modify_time.le(&src_modify_time){
+    let dst_modify_time = fs::metadata(dst)?.modified()?;
+    
+    if dst_modify_time.gt(&src_modify_time){
         return Ok(());
     }
 

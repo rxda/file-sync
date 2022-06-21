@@ -1,0 +1,9 @@
+[
+    {
+        "file_paths":[
+            "/Users/rxda/code/rust/mc-user-sync/test-file/a.txt",
+            "/Users/rxda/code/rust/mc-user-sync/test-file/b.txt"
+        ],
+        "direction_type":"Double"
+    }
+]
