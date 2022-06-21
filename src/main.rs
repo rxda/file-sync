@@ -91,10 +91,12 @@ fn copy_file_with_log(src: &str, dst: &str){
 
 
 fn copy_file(src: &str, dst: &str) -> anyhow::Result<()> {
+    println!("copy {} to {}....", src, dst);
     let src_modify_time = fs::metadata(src)?.modified()?;
     let dst_modify_time = fs::metadata(dst)?.modified()?;
     
     if dst_modify_time.gt(&src_modify_time){
+        println!("copy {} to {}....,time over", src, dst);
         return Ok(());
     }
 
@@ -110,11 +112,12 @@ fn copy_file(src: &str, dst: &str) -> anyhow::Result<()> {
     let dst_digest = md5::compute(&dst_contents);
 
     if src_digest == dst_digest {
+        println!("copy {} to {}....,same file", src, dst);
         return Ok(());
     } else {
         fs::write(dst, src_contents)?;
     }
-
+    println!("copy {} to {}....,success", src, dst);
     Ok(())
 }
 
