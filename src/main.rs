@@ -1,8 +1,8 @@
 use notify::{watcher, DebouncedEvent, RecursiveMode, Watcher};
 use std::fs::{self, File};
-use std::io::{Read};
-use std::sync::mpsc::channel;
-use std::{thread, env};
+use std::io::Read;
+use std::sync::mpsc::{channel, self, Sender, Receiver};
+use std::env;
 use std::time::Duration;
 use serde::{Deserialize, Serialize};
 
@@ -18,9 +18,8 @@ async fn main() {
 
     config_watch(&config).await.unwrap();
 
-    loop {
-        thread::sleep(std::time::Duration::from_secs(1000));
-    }
+    let (_tx, rx): (Sender<i32>, Receiver<i32>) = mpsc::channel();
+    rx.recv().unwrap();
 }
 
 #[derive(Serialize, Deserialize)]
@@ -34,7 +33,7 @@ struct SyncConfig {
     direction_type: DirectionType,
 }
 
-async fn config_watch(configs: &Vec<SyncConfig>) -> anyhow::Result<()> {
+async fn config_watch(configs: &[SyncConfig]) -> anyhow::Result<()> {
     for config in configs {
         let path0 = config.file_paths[0].clone();
         let path1 = config.file_paths[1].clone();
